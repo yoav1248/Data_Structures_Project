@@ -1,9 +1,11 @@
 public class TwoThreeTree<T> {
     private final Comparator<T> comp;
+    private final Measure<T> measure;
     private Node root;
 
-    public TwoThreeTree(Comparator<T> comp) {
+    public TwoThreeTree(Comparator<T> comp, Measure<T> measure) {
         this.comp = comp;
+        this.measure = measure;
 
         Node l = new Node(comp.MIN());
         Node m = new Node(comp.MAX());
@@ -16,11 +18,31 @@ public class TwoThreeTree<T> {
         this.root = x;
     }
 
+    public int getSize() {
+        return root.size;
+    }
+
+    public boolean isEmpty() {
+        // Only the two sentinels
+        return root.size == 0;
+    }
+
     public T search(T k) {
         Node result = root.search(k);
-        if (result == null)
-            return null;
-        return result.key;
+        return result == null ? null : result.key;
+    }
+
+    public void printPreOrder() {
+        printPreOrder(root);
+    }
+
+    private void printPreOrder(Node x) {
+        if (x == null)
+            return;
+        System.out.println(x.key + " " + x.size);
+        printPreOrder(x.left);
+        printPreOrder(x.middle);
+        printPreOrder(x.right);
     }
 
     private Node minNode() {
@@ -31,17 +53,85 @@ public class TwoThreeTree<T> {
         return x;
     }
 
-    public T min() {
+    public T popMin() {
+        Node minNode = minNode();
+        delete(minNode);
+        return minNode.key;
+    }
+
+    public T getMin() {
         return minNode().key;
     }
 
     public void printInOrder() {
+        if (isEmpty()) {
+            System.out.println();
+            return;
+        }
+
         Node x = minNode();
         while (x != null) {
-            System.out.print(x.key + " ");
+            System.out.println(x.key + " " + x.size);
             x = x.succ();
         }
         System.out.println();
+    }
+
+    public int aggregateLower(T k, boolean includeEqual, boolean isWeight) {
+        return innerAggregateLower(root, k, includeEqual, isWeight);
+    }
+
+    private int innerAggregateLower(Node x, T k, boolean includeEqual, boolean isWeight) {
+        if (x.isLeaf()) {
+            if (includeEqual ? comp.leq(x.key, k) : comp.lessThan(x.key, k)) {
+                return x.sizeOrWeight(isWeight);
+            } else {
+                return 0;
+            }
+        }
+        if (comp.leq(k, x.left.key)) {
+            return innerAggregateLower(x.left, k, includeEqual, isWeight);
+        } else if (comp.leq(k, x.middle.key)) {
+            return x.left.sizeOrWeight(isWeight) + innerAggregateLower(x.middle, k, includeEqual, isWeight);
+        } else {
+            return x.left.sizeOrWeight(isWeight) + x.middle.sizeOrWeight(isWeight)
+                    + innerAggregateLower(x.right, k, includeEqual, isWeight);
+        }
+    }
+
+    public boolean delete(T x) {
+        Node n = root.search(x);
+        if (n == null) {
+            return false;
+        }
+        delete(n);
+        return true;
+    }
+
+    private void delete(Node x) {
+        Node y = x.p;
+        if (x == y.left) {
+            y.setChildren(y.middle, y.right);
+        } else if (x == y.middle) {
+            y.setChildren(y.left, y.right);
+        } else {
+            y.setChildren(y.left, y.middle);
+        }
+
+        while (y != null) {
+            if (y.middle != null) {
+                y.updateKey();
+                y = y.p;
+            } else {
+                if (y != root) {
+                    y = y.BorrowOrMerge();
+                } else {
+                    root = y.left;
+                    y.left.p = null;
+                    return;
+                }
+            }
+        }
     }
 
     public void insert(T x) {
@@ -81,12 +171,21 @@ public class TwoThreeTree<T> {
     private class Node {
         T key;
         Node left, middle, right, p;
+        int size;
+        int weight;
 
         Node() {
         }
 
         Node(T key) {
             this.key = key;
+            if (comp.equals(key, comp.MIN()) || comp.equals(key, comp.MAX())) {
+                this.size = 0;
+                this.weight = 0;
+            } else {
+                this.size = 1;
+                this.weight = measure == null ? 0 : measure.get(key);
+            }
         }
 
         boolean isLeaf() {
@@ -95,10 +194,18 @@ public class TwoThreeTree<T> {
 
         void updateKey() {
             key = left.key;
-            if (middle != null)
+            size = left.size;
+            weight = left.weight;
+            if (middle != null) {
                 key = middle.key;
-            if (right != null)
+                size += middle.size;
+                weight += middle.weight;
+            }
+            if (right != null) {
                 key = right.key;
+                size += right.size;
+                weight += right.weight;
+            }
         }
 
         void setChildren(Node l, Node m, Node r) {
@@ -168,6 +275,44 @@ public class TwoThreeTree<T> {
             return newNode;
         }
 
+        Node BorrowOrMerge() {
+            Node z = this.p;
+            if (this == z.left) {
+                Node x = z.middle;
+                if (x.right != null) {
+                    this.setChildren(this.left, x.left);
+                    x.setChildren(x.middle, x.right);
+                } else {
+                    x.setChildren(this.left, x.left, x.middle);
+                    z.setChildren(x, z.right);
+                }
+                return z;
+            }
+            if (this == z.middle) {
+                Node x = z.left;
+                if (x.right != null) {
+                    this.setChildren(x.right, this.left);
+                    x.setChildren(x.left, x.middle);
+                } else {
+                    x.setChildren(x.left, x.middle, this.left);
+                    z.setChildren(x, z.right);
+                }
+                return z;
+            }
+            if (this == z.right) {
+                Node x = z.middle;
+                if (x.right != null) {
+                    this.setChildren(x.right, this.left);
+                    x.setChildren(x.left, x.middle);
+                } else {
+                    x.setChildren(x.left, x.middle, this.left);
+                    z.setChildren(z.left, x);
+                }
+                return z;
+            }
+            return z;
+        }
+
         Node succ() {
             Node x = this;
             Node z = x.p;
@@ -191,6 +336,10 @@ public class TwoThreeTree<T> {
                 return y;
             else
                 return null;
+        }
+
+        int sizeOrWeight(boolean isWeight) {
+            return isWeight ? weight : size;
         }
     }
 }
