@@ -174,14 +174,34 @@ public class Main {
         sb.append("patientEnter D2 P22, ");
         cm.patientEnter("D2", "P23");
         sb.append("patientEnter D2 P23, ");
+
+        if(cm.doctorTree.getSize() != cm.numPatientsTree.getSize())
+            throw new AssertionError();
+
         cm.doctorEnter("D3");
         sb.append("doctorEnter D3, ");
+
+        if(cm.doctorTree.getSize() != cm.numPatientsTree.getSize())
+            throw new AssertionError();
+
         cm.patientEnter("D3", "P31");
         sb.append("patientEnter D3 P31, ");
+
+        if(cm.doctorTree.getSize() != cm.numPatientsTree.getSize())
+            throw new AssertionError();
+
         cm.patientEnter("D3", "P32");
         sb.append("patientEnter D3 P32, ");
+
+        if(cm.doctorTree.getSize() != cm.numPatientsTree.getSize())
+            throw new AssertionError();
+
         cm.patientEnter("D3", "P33");
         sb.append("patientEnter D3 P33, ");
+
+        if(cm.doctorTree.getSize() != cm.numPatientsTree.getSize())
+            throw new AssertionError();
+
         cm.doctorEnter("D4");
         sb.append("doctorEnter D4, ");
         cm.patientEnter("D4", "P41");
@@ -190,8 +210,15 @@ public class Main {
         sb.append("patientEnter D4 P42, ");
         cm.patientEnter("D4", "P43");
         sb.append("patientEnter D4 P43, ");
+
+        if(cm.doctorTree.getSize() != cm.numPatientsTree.getSize())
+            throw new AssertionError();
+
         int res1 = cm.numDoctorsWithLoadInRange(3, 3); sb.append("numDoctorsWithLoadInRange 3 3 -> ").append(res1).append(", ");
         int res2 = cm.averageLoadWithinRange(3, 3); sb.append("averageLoadWithinRange 3 3 -> ").append(res2);
+
+        if(cm.doctorTree.getSize() != cm.numPatientsTree.getSize())
+            throw new AssertionError();
 
         String result = sb.toString();
         if (result.endsWith(", ")) result = result.substring(0, result.length()-2);

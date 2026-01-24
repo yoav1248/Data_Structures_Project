@@ -39,12 +39,14 @@ public class ClinicManager {
             throw new IllegalArgumentException();
         }
 
+        // delete doc before it is changed
+        numPatientsTree.delete(doc);
+
         patient.setQueueNum(doc.newQueueNum());
         allPatientTree.insert(patient);
         doc.getPatientTree().insert(patient);
 
-        // delete and reinsert to update the patient count tree
-        numPatientsTree.delete(doc);
+        // reinsert afterwards to update patient count tree
         numPatientsTree.insert(doc);
     }
 
@@ -55,11 +57,13 @@ public class ClinicManager {
             throw new IllegalArgumentException();
         }
 
+        // delete doc before it is changed
+        numPatientsTree.delete(doc);
+
         Patient nextPatient = doc.getPatientTree().popMin();
         allPatientTree.delete(nextPatient);
 
-        // delete and reinsert to update the patient count tree
-        numPatientsTree.delete(doc);
+        // reinsert afterwards to update patient count tree
         numPatientsTree.insert(doc);
 
         return nextPatient.getPatientId();
@@ -72,14 +76,17 @@ public class ClinicManager {
             throw new IllegalArgumentException();
         }
 
-        allPatientTree.delete(patient);
-
         Doctor doc = doctorTree.search(new Doctor(patient.getDoctorId()));
+
+        // delete doc before it is changed
+        numPatientsTree.delete(doc);
+
+        allPatientTree.delete(patient);
         // Find patient by their QUEUE NUMBER and delete them.
         doc.getPatientTree().delete(patient);
 
-        // delete and reinsert to update the patient count tree
-        numPatientsTree.delete(doc);
+
+        // reinsert afterwards to update patient count tree
         numPatientsTree.insert(doc);
     }
 
@@ -108,15 +115,28 @@ public class ClinicManager {
     }
 
     public int numDoctorsWithLoadInRange(int low, int high) {
-        Doctor lowerDoctor = Doctor.buildFakeTreeSizeDoctor(low);
+        Doctor lowerDoctor = Doctor.buildFakeTreeSizeDoctor(low - 1);
         Doctor upperDoctor = Doctor.buildFakeTreeSizeDoctor(high);
 
-        int lowerNum = numPatientsTree.aggregateLower(lowerDoctor, false, false);
+        int lowerNum = numPatientsTree.aggregateLower(lowerDoctor, true, false);
         int upperNum = numPatientsTree.aggregateLower(upperDoctor, true, false);
         return upperNum - lowerNum;
     }
 
     public int averageLoadWithinRange(int low, int high) {
-        return 0;
+        Doctor lowerDoctor = Doctor.buildFakeTreeSizeDoctor(low - 1);
+        Doctor upperDoctor = Doctor.buildFakeTreeSizeDoctor(high);
+
+        int lowerNum = numPatientsTree.aggregateLower(lowerDoctor, true, false);
+        int upperNum = numPatientsTree.aggregateLower(upperDoctor, true, false);
+
+        int lowerSum = numPatientsTree.aggregateLower(lowerDoctor, true, true);
+        int upperSum = numPatientsTree.aggregateLower(upperDoctor, true, true);
+
+        if (lowerNum == upperNum) {
+            return 0;
+        }
+
+        return (upperSum - lowerSum) / (upperNum - lowerNum);
     }
 }

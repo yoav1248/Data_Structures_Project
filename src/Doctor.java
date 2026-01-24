@@ -2,7 +2,7 @@ public class Doctor {
     private final String doctorId;
     private final TwoThreeTree<Patient> patientTree;
     private int queueNum;
-    private int fakeTreeSize = -1;
+    private int fakeTreeSize = -2;
 
     public Doctor(String doctorId) {
         this.doctorId = doctorId;
@@ -23,7 +23,7 @@ public class Doctor {
     }
 
     public static Doctor buildFakeTreeSizeDoctor(int val) {
-        Doctor doc = new Doctor("");
+        Doctor doc = new Doctor(ClinicManager.MAX_ID);
         doc.fakeTreeSize = val;
         return doc;
     }
@@ -46,7 +46,7 @@ public class Doctor {
     };
 
     private int getFakeSize() {
-        if (fakeTreeSize == -1) {
+        if (fakeTreeSize == -2) {
             return patientTree.getSize();
         }
         return fakeTreeSize;
