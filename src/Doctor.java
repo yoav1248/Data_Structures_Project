@@ -18,10 +18,6 @@ public class Doctor {
         return queueNum++;
     }
 
-    public String toString() {
-        return doctorId;
-    }
-
     public static Doctor buildFakeTreeSizeDoctor(int val) {
         Doctor doc = new Doctor(ClinicManager.MAX_ID);
         doc.fakeTreeSize = val;

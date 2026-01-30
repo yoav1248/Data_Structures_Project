@@ -36,10 +36,6 @@ public class Patient {
         }
     };
 
-    public String toString() {
-        return getPatientId() + " at doctor " + getDoctorId() + " with queue number " + getQueueNum();
-    }
-
     public String getPatientId() {
         return patientId;
     }

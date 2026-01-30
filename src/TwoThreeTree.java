@@ -32,19 +32,6 @@ public class TwoThreeTree<T> {
         return result == null ? null : result.key;
     }
 
-    public void printPreOrder() {
-        printPreOrder(root);
-    }
-
-    private void printPreOrder(Node x) {
-        if (x == null)
-            return;
-        System.out.println(x.key + " " + x.size);
-        printPreOrder(x.left);
-        printPreOrder(x.middle);
-        printPreOrder(x.right);
-    }
-
     private Node minNode() {
         Node x = root;
         while (!x.isLeaf())
@@ -61,20 +48,6 @@ public class TwoThreeTree<T> {
 
     public T getMin() {
         return minNode().key;
-    }
-
-    public void printInOrder() {
-        if (isEmpty()) {
-            System.out.println();
-            return;
-        }
-
-        Node x = minNode();
-        while (x != null) {
-            System.out.println(x.key + " " + x.size);
-            x = x.succ();
-        }
-        System.out.println();
     }
 
     public int aggregateLower(T k, boolean includeEqual, boolean isWeight) {
@@ -311,31 +284,6 @@ public class TwoThreeTree<T> {
                 return z;
             }
             return z;
-        }
-
-        Node succ() {
-            Node x = this;
-            Node z = x.p;
-
-            while (x == z.right || (z.right == null && x == z.middle)) {
-                x = z;
-                z = z.p;
-            }
-
-            Node y;
-            if (x == z.left)
-                y = z.middle;
-            else
-                y = z.right;
-
-            while (!y.isLeaf()) {
-                y = y.left;
-            }
-
-            if (comp.lessThan(y.key, comp.MAX()))
-                return y;
-            else
-                return null;
         }
 
         int sizeOrWeight(boolean isWeight) {

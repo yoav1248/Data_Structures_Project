@@ -115,6 +115,10 @@ public class ClinicManager {
     }
 
     public int numDoctorsWithLoadInRange(int low, int high) {
+        if (low < 0) {
+            low = 0;
+        }
+
         Doctor lowerDoctor = Doctor.buildFakeTreeSizeDoctor(low - 1);
         Doctor upperDoctor = Doctor.buildFakeTreeSizeDoctor(high);
 
@@ -124,6 +128,10 @@ public class ClinicManager {
     }
 
     public int averageLoadWithinRange(int low, int high) {
+        if (low < 0) {
+            low = 0;
+        }
+
         Doctor lowerDoctor = Doctor.buildFakeTreeSizeDoctor(low - 1);
         Doctor upperDoctor = Doctor.buildFakeTreeSizeDoctor(high);
 
