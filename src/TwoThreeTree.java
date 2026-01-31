@@ -1,163 +1,173 @@
 public class TwoThreeTree<T> {
-    private final Comparator<T> comp;
+    private final Comparator<T> comparator;
     private final Measure<T> measure;
     private Node root;
 
-    public TwoThreeTree(Comparator<T> comp, Measure<T> measure) {
-        this.comp = comp;
+    public TwoThreeTree(Comparator<T> comparator, Measure<T> measure) {
+        this.comparator = comparator;
         this.measure = measure;
 
-        Node l = new Node(comp.MIN());
-        Node m = new Node(comp.MAX());
-        Node x = new Node(comp.MAX());
+        Node leftSentinel = new Node(comparator.MIN());
+        Node rightSentinel = new Node(comparator.MAX());
+        Node initialRoot = new Node(comparator.MAX());
 
-        l.p = m.p = x;
-        x.left = l;
-        x.middle = m;
+        leftSentinel.parent = rightSentinel.parent = initialRoot;
+        initialRoot.left = leftSentinel;
+        initialRoot.middle = rightSentinel;
 
-        this.root = x;
+        this.root = initialRoot;
     }
 
     public int getSize() {
-        return root.size;
+        return root.subtreeSize;
     }
 
     public boolean isEmpty() {
-        // Only the two sentinels
-        return root.size == 0;
+        return root.subtreeSize == 0;
     }
 
-    public T search(T k) {
-        Node result = root.search(k);
+    public T search(T key) {
+        Node result = root.search(key);
         return result == null ? null : result.key;
     }
 
-    private Node minNode() {
-        Node x = root;
-        while (!x.isLeaf())
-            x = x.left;
-        x = x.p.middle;
-        return x;
+    private Node findMinNode() {
+        Node currentNode = root;
+        while (!currentNode.isLeaf())
+            currentNode = currentNode.left;
+
+        currentNode = currentNode.parent.middle;
+        return currentNode;
     }
 
     public T popMin() {
-        Node minNode = minNode();
-        delete(minNode);
+        Node minNode = findMinNode();
+        deleteNode(minNode);
         return minNode.key;
     }
 
     public T getMin() {
-        return minNode().key;
+        return findMinNode().key;
     }
 
-    public int aggregateLower(T k, boolean includeEqual, boolean isWeight) {
-        return innerAggregateLower(root, k, includeEqual, isWeight);
+    public int aggregateLower(T key, boolean includeEqual, boolean isWeight) {
+        return recursiveAggregateLower(root, key, includeEqual, isWeight);
     }
 
-    private int innerAggregateLower(Node x, T k, boolean includeEqual, boolean isWeight) {
-        if (x.isLeaf()) {
-            if (includeEqual ? comp.leq(x.key, k) : comp.lessThan(x.key, k)) {
-                return x.sizeOrWeight(isWeight);
+    private int recursiveAggregateLower(Node currentNode, T targetKey, boolean includeEqual, boolean isWeight) {
+        if (currentNode.isLeaf()) {
+            boolean condition = includeEqual ?
+                    comparator.leq(currentNode.key, targetKey) :
+                    comparator.lessThan(currentNode.key, targetKey);
+
+            if (condition) {
+                return currentNode.getSizeOrWeight(isWeight);
             } else {
                 return 0;
             }
         }
-        if (comp.leq(k, x.left.key)) {
-            return innerAggregateLower(x.left, k, includeEqual, isWeight);
-        } else if (comp.leq(k, x.middle.key)) {
-            return x.left.sizeOrWeight(isWeight) + innerAggregateLower(x.middle, k, includeEqual, isWeight);
+
+        if (comparator.leq(targetKey, currentNode.left.key)) {
+            return recursiveAggregateLower(currentNode.left, targetKey, includeEqual, isWeight);
+        } else if (comparator.leq(targetKey, currentNode.middle.key)) {
+            return currentNode.left.getSizeOrWeight(isWeight) +
+                    recursiveAggregateLower(currentNode.middle, targetKey, includeEqual, isWeight);
         } else {
-            return x.left.sizeOrWeight(isWeight) + x.middle.sizeOrWeight(isWeight)
-                    + innerAggregateLower(x.right, k, includeEqual, isWeight);
+            return currentNode.left.getSizeOrWeight(isWeight) +
+                    currentNode.middle.getSizeOrWeight(isWeight) +
+                    recursiveAggregateLower(currentNode.right, targetKey, includeEqual, isWeight);
         }
     }
 
-    public boolean delete(T x) {
-        Node n = root.search(x);
-        if (n == null) {
+    public boolean delete(T value) {
+        Node nodeToDelete = root.search(value);
+        if (nodeToDelete == null) {
             return false;
         }
-        delete(n);
+        deleteNode(nodeToDelete);
         return true;
     }
 
-    private void delete(Node x) {
-        Node y = x.p;
-        if (x == y.left) {
-            y.setChildren(y.middle, y.right);
-        } else if (x == y.middle) {
-            y.setChildren(y.left, y.right);
+    private void deleteNode(Node nodeToDelete) {
+        Node parentNode = nodeToDelete.parent;
+
+        if (nodeToDelete == parentNode.left) {
+            parentNode.setChildren(parentNode.middle, parentNode.right);
+        } else if (nodeToDelete == parentNode.middle) {
+            parentNode.setChildren(parentNode.left, parentNode.right);
         } else {
-            y.setChildren(y.left, y.middle);
+            parentNode.setChildren(parentNode.left, parentNode.middle);
         }
 
-        while (y != null) {
-            if (y.middle != null) {
-                y.updateKey();
-                y = y.p;
+        while (parentNode != null) {
+            if (parentNode.middle != null) {
+                parentNode.updateStats();
+                parentNode = parentNode.parent;
             } else {
-                if (y != root) {
-                    y = y.BorrowOrMerge();
+                if (parentNode != root) {
+                    parentNode = parentNode.borrowOrMerge();
                 } else {
-                    root = y.left;
-                    y.left.p = null;
+                    root = parentNode.left;
+                    parentNode.left.parent = null;
                     return;
                 }
             }
         }
     }
 
-    public void insert(T x) {
-        insert(new Node(x));
+    public void insert(T value) {
+        insertNode(new Node(value));
     }
 
-    private void insert(Node z) {
-        Node y = root;
-        while (!y.isLeaf()) {
-            if (comp.lessThan(z.key, y.left.key)) {
-                y = y.left;
-            } else if (comp.lessThan(z.key, y.middle.key)) {
-                y = y.middle;
+    private void insertNode(Node nodeToInsert) {
+        Node currentNode = root;
+
+        while (!currentNode.isLeaf()) {
+            if (comparator.lessThan(nodeToInsert.key, currentNode.left.key)) {
+                currentNode = currentNode.left;
+            } else if (comparator.lessThan(nodeToInsert.key, currentNode.middle.key)) {
+                currentNode = currentNode.middle;
             } else {
-                y = y.right;
+                currentNode = currentNode.right;
             }
         }
 
-        Node x = y.p;
-        z = x.insertAndSplit(z);
-        while (x != root) {
-            x = x.p;
-            if (z != null) {
-                z = x.insertAndSplit(z);
+        Node parentNode = currentNode.parent;
+        Node splitNode = parentNode.insertAndSplit(nodeToInsert);
+
+        while (parentNode != root) {
+            parentNode = parentNode.parent;
+            if (splitNode != null) {
+                splitNode = parentNode.insertAndSplit(splitNode);
             } else {
-                x.updateKey();
+                parentNode.updateStats();
             }
         }
 
-        if (z != null) {
-            Node w = new Node();
-            w.setChildren(x, z);
-            root = w;
+        if (splitNode != null) {
+            Node newRoot = new Node();
+            newRoot.setChildren(parentNode, splitNode);
+            root = newRoot;
         }
     }
 
     private class Node {
         T key;
-        Node left, middle, right, p;
-        int size;
-        int weight;
+        Node left, middle, right, parent;
+        int subtreeSize;
+        int subtreeWeight;
 
         Node() {
         }
 
         Node(T key) {
             this.key = key;
-            if (comp.equals(key, comp.MIN()) || comp.equals(key, comp.MAX())) {
-                this.size = 0;
-                this.weight = 0;
+            if (comparator.equals(key, comparator.MIN()) || comparator.equals(key, comparator.MAX())) {
+                this.subtreeSize = 0;
+                this.subtreeWeight = 0;
             } else {
-                this.size = 1;
-                this.weight = measure == null ? 0 : measure.get(key);
+                this.subtreeSize = 1;
+                this.subtreeWeight = measure == null ? 0 : measure.get(key);
             }
         }
 
@@ -165,129 +175,136 @@ public class TwoThreeTree<T> {
             return left == null;
         }
 
-        void updateKey() {
+        void updateStats() {
             key = left.key;
-            size = left.size;
-            weight = left.weight;
+            subtreeSize = left.subtreeSize;
+            subtreeWeight = left.subtreeWeight;
+
             if (middle != null) {
                 key = middle.key;
-                size += middle.size;
-                weight += middle.weight;
+                subtreeSize += middle.subtreeSize;
+                subtreeWeight += middle.subtreeWeight;
             }
+
             if (right != null) {
                 key = right.key;
-                size += right.size;
-                weight += right.weight;
+                subtreeSize += right.subtreeSize;
+                subtreeWeight += right.subtreeWeight;
             }
         }
 
-        void setChildren(Node l, Node m, Node r) {
-            left = l;
-            middle = m;
-            right = r;
-            l.p = this;
-            if (m != null)
-                m.p = this;
-            if (r != null)
-                r.p = this;
-            updateKey();
+        void setChildren(Node newLeft, Node newMiddle, Node newRight) {
+            left = newLeft;
+            middle = newMiddle;
+            right = newRight;
+
+            newLeft.parent = this;
+            if (newMiddle != null)
+                newMiddle.parent = this;
+            if (newRight != null)
+                newRight.parent = this;
+
+            updateStats();
         }
 
-        void setChildren(Node l, Node m) {
-            setChildren(l, m, null);
+        void setChildren(Node newLeft, Node newMiddle) {
+            setChildren(newLeft, newMiddle, null);
         }
 
-        Node search(T k) {
+        Node search(T targetKey) {
             if (isLeaf()) {
-                if (comp.equals(key, k))
+                if (comparator.equals(key, targetKey))
                     return this;
                 else
                     return null;
             }
 
-            if (comp.leq(k, left.key)) {
-                return left.search(k);
-            } else if (comp.leq(k, middle.key)) {
-                return middle.search(k);
+            if (comparator.leq(targetKey, left.key)) {
+                return left.search(targetKey);
+            } else if (comparator.leq(targetKey, middle.key)) {
+                return middle.search(targetKey);
             } else {
-                return right.search(k);
+                return right.search(targetKey);
             }
         }
 
-        Node insertAndSplit(Node other) {
+        Node insertAndSplit(Node childToInsert) {
             Node l = left;
             Node m = middle;
             Node r = right;
 
             if (r == null) {
-                if (comp.lessThan(other.key, l.key)) {
-                    this.setChildren(other, l, m);
-                } else if (comp.lessThan(other.key, m.key)) {
-                    this.setChildren(l, other, m);
+                if (comparator.lessThan(childToInsert.key, l.key)) {
+                    this.setChildren(childToInsert, l, m);
+                } else if (comparator.lessThan(childToInsert.key, m.key)) {
+                    this.setChildren(l, childToInsert, m);
                 } else {
-                    this.setChildren(l, m, other);
+                    this.setChildren(l, m, childToInsert);
                 }
                 return null;
             }
 
-            Node newNode = new Node();
+            Node newSiblingNode = new Node();
 
-            if (comp.lessThan(other.key, l.key)) {
-                this.setChildren(other, l);
-                newNode.setChildren(m, r);
-            } else if (comp.lessThan(other.key, m.key)) {
-                this.setChildren(l, other);
-                newNode.setChildren(m, r);
-            } else if (comp.lessThan(other.key, r.key)) {
+            if (comparator.lessThan(childToInsert.key, l.key)) {
+                this.setChildren(childToInsert, l);
+                newSiblingNode.setChildren(m, r);
+            } else if (comparator.lessThan(childToInsert.key, m.key)) {
+                this.setChildren(l, childToInsert);
+                newSiblingNode.setChildren(m, r);
+            } else if (comparator.lessThan(childToInsert.key, r.key)) {
                 this.setChildren(l, m);
-                newNode.setChildren(other, r);
+                newSiblingNode.setChildren(childToInsert, r);
             } else {
                 this.setChildren(l, m);
-                newNode.setChildren(r, other);
+                newSiblingNode.setChildren(r, childToInsert);
             }
-            return newNode;
+            return newSiblingNode;
         }
 
-        Node BorrowOrMerge() {
-            Node z = this.p;
-            if (this == z.left) {
-                Node x = z.middle;
-                if (x.right != null) {
-                    this.setChildren(this.left, x.left);
-                    x.setChildren(x.middle, x.right);
+        Node borrowOrMerge() {
+            Node parentNode = this.parent;
+
+            if (this == parentNode.left) {
+                Node sibling = parentNode.middle;
+                if (sibling.right != null) {
+                    this.setChildren(this.left, sibling.left);
+                    sibling.setChildren(sibling.middle, sibling.right);
                 } else {
-                    x.setChildren(this.left, x.left, x.middle);
-                    z.setChildren(x, z.right);
+                    sibling.setChildren(this.left, sibling.left, sibling.middle);
+                    parentNode.setChildren(sibling, parentNode.right);
                 }
-                return z;
+                return parentNode;
             }
-            if (this == z.middle) {
-                Node x = z.left;
-                if (x.right != null) {
-                    this.setChildren(x.right, this.left);
-                    x.setChildren(x.left, x.middle);
+
+            if (this == parentNode.middle) {
+                Node sibling = parentNode.left;
+                if (sibling.right != null) {
+                    this.setChildren(sibling.right, this.left);
+                    sibling.setChildren(sibling.left, sibling.middle);
                 } else {
-                    x.setChildren(x.left, x.middle, this.left);
-                    z.setChildren(x, z.right);
+                    sibling.setChildren(sibling.left, sibling.middle, this.left);
+                    parentNode.setChildren(sibling, parentNode.right);
                 }
-                return z;
+                return parentNode;
             }
-            if (this == z.right) {
-                Node x = z.middle;
-                if (x.right != null) {
-                    this.setChildren(x.right, this.left);
-                    x.setChildren(x.left, x.middle);
+
+            if (this == parentNode.right) {
+                Node sibling = parentNode.middle;
+                if (sibling.right != null) {
+                    this.setChildren(sibling.right, this.left);
+                    sibling.setChildren(sibling.left, sibling.middle);
                 } else {
-                    x.setChildren(x.left, x.middle, this.left);
-                    z.setChildren(z.left, x);
+                    sibling.setChildren(sibling.left, sibling.middle, this.left);
+                    parentNode.setChildren(parentNode.left, sibling);
                 }
-                return z;
+                return parentNode;
             }
-            return z;
+            return parentNode;
         }
 
-        int sizeOrWeight(boolean isWeight) {
-            return isWeight ? weight : size;
+        int getSizeOrWeight(boolean isWeight) {
+            return isWeight ? subtreeWeight : subtreeSize;
         }
     }
 }

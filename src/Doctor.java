@@ -1,12 +1,14 @@
 public class Doctor {
+    private static final int UNSET_SIZE = -2;
+
     private final String doctorId;
     private final TwoThreeTree<Patient> patientTree;
     private int queueNum;
-    private int fakeTreeSize = -2;
+    private int virtualSize = UNSET_SIZE;
 
     public Doctor(String doctorId) {
         this.doctorId = doctorId;
-        this.patientTree = new TwoThreeTree<>(Patient.queueNumComp, null);
+        this.patientTree = new TwoThreeTree<>(Patient.byQueueNumber, null);
         this.queueNum = 0;
     }
 
@@ -18,16 +20,17 @@ public class Doctor {
         return queueNum++;
     }
 
-    public static Doctor buildFakeTreeSizeDoctor(int val) {
+    // Creates a dummy doctor object used for searching by size
+    public static Doctor createDummyWithVirtualSize(int size) {
         Doctor doc = new Doctor(ClinicManager.MAX_ID);
-        doc.fakeTreeSize = val;
+        doc.virtualSize = size;
         return doc;
     }
 
-    public static Comparator<Doctor> comparator = new Comparator<>() {
+    public static Comparator<Doctor> byId = new Comparator<>() {
         @Override
-        public long compare(Doctor o1, Doctor o2) {
-            return o1.doctorId.compareTo(o2.doctorId);
+        public long compare(Doctor d1, Doctor d2) {
+            return d1.doctorId.compareTo(d2.doctorId);
         }
 
         @Override
@@ -41,31 +44,31 @@ public class Doctor {
         }
     };
 
-    private int getFakeSize() {
-        if (fakeTreeSize == -2) {
+    private int getEffectiveSize() {
+        if (virtualSize == UNSET_SIZE) {
             return patientTree.getSize();
         }
-        return fakeTreeSize;
+        return virtualSize;
     }
 
-    public static Comparator<Doctor> treeSizeComp = new Comparator<>() {
+    public static Comparator<Doctor> byPatientCount = new Comparator<>() {
         @Override
-        public long compare(Doctor o1, Doctor o2) {
-            long sizeDiff = (long) o1.getFakeSize() - o2.getFakeSize();
+        public long compare(Doctor d1, Doctor d2) {
+            long sizeDiff = (long) d1.getEffectiveSize() - d2.getEffectiveSize();
             if (sizeDiff != 0)
                 return sizeDiff;
-            // doctorId tie-breaker
-            return o1.doctorId.compareTo(o2.doctorId);
+
+            return d1.doctorId.compareTo(d2.doctorId);
         }
 
         @Override
         public Doctor MAX() {
-            return buildFakeTreeSizeDoctor(Integer.MAX_VALUE);
+            return createDummyWithVirtualSize(Integer.MAX_VALUE);
         }
 
         @Override
         public Doctor MIN() {
-            return buildFakeTreeSizeDoctor(Integer.MIN_VALUE);
+            return createDummyWithVirtualSize(Integer.MIN_VALUE);
         }
     };
 }

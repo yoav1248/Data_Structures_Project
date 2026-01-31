@@ -1,11 +1,13 @@
 public class Patient {
-    private String patientId, doctorId;
+    private String patientId;
+    private String doctorId;
     private int queueNum;
 
-    public static Comparator<Patient> queueNumComp = new Comparator<Patient>() {
+    // comparator for queue number (smaller number = higher priority)
+    public static Comparator<Patient> byQueueNumber = new Comparator<>() {
         @Override
-        public long compare(Patient o1, Patient o2) {
-            return (long)o1.queueNum - o2.queueNum;
+        public long compare(Patient p1, Patient p2) {
+            return (long) p1.queueNum - p2.queueNum;
         }
 
         @Override
@@ -19,10 +21,10 @@ public class Patient {
         }
     };
 
-    public static Comparator<Patient> comparator = new Comparator<Patient>() {
+    public static Comparator<Patient> byId = new Comparator<Patient>() {
         @Override
-        public long compare(Patient o1, Patient o2) {
-            return o1.patientId.compareTo(o2.patientId);
+        public long compare(Patient p1, Patient p2) {
+            return p1.patientId.compareTo(p2.patientId);
         }
 
         @Override

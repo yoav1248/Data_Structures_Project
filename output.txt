@@ -1,4 +1,4 @@
-C:\Users\yoava\.jdks\openjdk-24\bin\java.exe "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2024.3.5\lib\idea_rt.jar=50080" -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -classpath C:\Users\yoava\IdeaProjects\THE_WET_ONE\out\production\THE_WET_ONE Main -ea
+C:\Users\yoava\.jdks\openjdk-24\bin\java.exe "-javaagent:C:\Program Files\JetBrains\IntelliJ IDEA 2024.3.5\lib\idea_rt.jar=55571" -Dfile.encoding=UTF-8 -Dsun.stdout.encoding=UTF-8 -Dsun.stderr.encoding=UTF-8 -classpath C:\Users\yoava\IdeaProjects\THE_WET_ONE\out\production\THE_WET_ONE Main -ea
 --- PPR1 ---
 numDoctorsWithLoadInRange 0 10 -> 0, averageLoadWithinRange 0 10 -> 0, doctorLeave D1 -> ILLEGAL, nextPatient D1 -> ILLEGAL
 --- PPR2 ---
